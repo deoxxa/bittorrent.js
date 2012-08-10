@@ -24,13 +24,18 @@ Usage
 
 Take a look at [https://github.com/deoxxa/bittorrent.js/blob/master/demo.js](demo.js) for now.
 
+Contributors
+------------
+
+* yawnt ([https://github.com/yawnt](github) [https://twitter.com/yawnt](twitter))
+
 License
 -------
 
 3-clause BSD. A copy is included with the source.
 
-Contact
--------
+Contact Me
+----------
 
 * GitHub ([http://github.com/deoxxa](deoxxa))
 * Twitter ([http://twitter.com/deoxxa](@deoxxa))

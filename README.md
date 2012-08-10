@@ -27,7 +27,7 @@ Take a look at [https://github.com/deoxxa/bittorrent.js/blob/master/demo.js](dem
 Contributors
 ------------
 
-* yawnt ([https://github.com/yawnt](github) [https://twitter.com/yawnt](twitter))
+* yawnt ([github](https://github.com/yawnt) [twitter](https://twitter.com/yawnt))
 
 License
 -------
@@ -37,6 +37,6 @@ License
 Contact Me
 ----------
 
-* GitHub ([http://github.com/deoxxa](deoxxa))
-* Twitter ([http://twitter.com/deoxxa](@deoxxa))
-* Email ([mailto:deoxxa@fknsrs.biz](deoxxa@fknsrs.biz))
+* GitHub ([deoxxa](http://github.com/deoxxa))
+* Twitter ([@deoxxa](http://twitter.com/deoxxa))
+* Email ([deoxxa@fknsrs.biz](mailto:deoxxa@fknsrs.biz))

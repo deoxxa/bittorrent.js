@@ -1,6 +1,6 @@
 {
   "name": "bittorrent",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "BitTorrent peer implementation",
   "author": "Conrad Pankoff <deoxxa@fknsrs.biz> (http://www.fknsrs.biz/)",
   "license": "BSD",

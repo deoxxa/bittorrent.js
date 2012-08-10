@@ -22,7 +22,7 @@ Here's a link to the [npm](https://npmjs.org/package/bittorrent) page.
 Usage
 -----
 
-Take a look at [demo.js](demo.js) for now.
+Take a look at [https://github.com/deoxxa/bittorrent.js/blob/master/demo.js](demo.js) for now.
 
 License
 -------

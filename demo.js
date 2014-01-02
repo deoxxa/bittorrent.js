@@ -13,15 +13,24 @@ var TorrentSession = function TorrentSession(options) {
 
   events.EventEmitter.call(this, options);
 
-  this.infoHash = options.infoHash || null;
-  this.torrent = options.torrent || null;
-  this.length = options.length || null;
-  this.pieceCount = options.pieceCount || null;
-  this.pieceLength = options.pieceLength || null;
-  this.bitfield = options.bitfield || null;
-  this.storage = options.storage || null;
+  if (options.peerId) {
+    this.setPeerId(options.peerId);
+  }
+
+  if (options.infoHash) {
+    this.setInfoHash(options.infoHash);
+  }
+
+  if (options.metainfo) {
+    this.loadFromObject(options.metainfo);
+  }
+
+  if (options.storage) {
+    this.setStorage(options.storage);
+  }
 
   this.connections = [];
+  this.requests = [];
 };
 TorrentSession.prototype = Object.create(events.EventEmitter.prototype, {constructor: {value: TorrentSession}});
 
@@ -34,11 +43,10 @@ TorrentSession.prototype.loadFromObject = function loadFromObject(torrent, done)
     return done(Error("pieces key is missing or invalid"));
   }
 
-  this.torrent = torrent;
+  this.metainfo = torrent;
   this.length = torrent.info.length;
   this.pieceCount = torrent.info.pieces.length / 20;
   this.pieceLength = torrent.info["piece length"];
-  this.bitfield = new Bitfield(Math.ceil(this.pieceCount / 8));
 
   this.pieceHashes = [];
   for (var i=0;i<this.pieceCount;++i) {
@@ -52,7 +60,7 @@ TorrentSession.prototype.loadFromObject = function loadFromObject(torrent, done)
   liberator.on("error", done).pipe(encoder).on("error", done).pipe(crypto.createHash("sha1")).on("error", done).on("data", function(infoHash) {
     self.setInfoHash(infoHash);
 
-    self.emit("torrent", torrent);
+    self.emit("metadata", torrent);
 
     return done();
   });
@@ -60,7 +68,21 @@ TorrentSession.prototype.loadFromObject = function loadFromObject(torrent, done)
   liberator.end(torrent.info);
 };
 
+TorrentSession.prototype.setPeerId = function setPeerId(peerId) {
+  if (typeof peerId === "string") {
+    peerId = Buffer(peerId);
+  }
+
+  this.peerId = peerId;
+
+  this.emit("peerId", peerId);
+};
+
 TorrentSession.prototype.setInfoHash = function setInfoHash(infoHash) {
+  if (typeof infoHash === "string") {
+    infoHash = Buffer(infoHash, "hex");
+  }
+
   this.infoHash = infoHash;
 
   this.emit("infoHash", infoHash);
@@ -69,69 +91,80 @@ TorrentSession.prototype.setInfoHash = function setInfoHash(infoHash) {
 TorrentSession.prototype.setStorage = function setStorage(storage) {
   this.storage = storage;
   this.bitfield = storage.getBitfield();
+
+  this.emit("storage", storage);
 };
 
-TorrentSession.prototype.connectTo = function connectTo(options, done) {
-  var _done = done;
+TorrentSession.prototype.addConnection = function addConnection(connection, done) {
+  this.connections.push(connection);
 
-  var calledDone = false;
-  done = function done() {
-    if (calledDone) { return; } else { calledDone = true; }
-    return _done.apply(null, arguments);
+  connection.on("bitfield", function(bitfield) {
+    console.log("%s: bitfield %s", connection.getRemotePeerId(), bitfield.toBuffer().toString("hex"));
+  });
+
+  connection.on("choked", function() {
+    console.log("%s: choked", connection.getRemotePeerId());
+  });
+
+  connection.on("unchoked", function() {
+    console.log("%s: unchoked", connection.getRemotePeerId());
+  });
+
+  connection.on("interested", function() {
+    console.log("%s: interested", connection.getRemotePeerId());
+  });
+
+  connection.on("notInterested", function() {
+    console.log("%s: notInterested", connection.getRemotePeerId());
+  });
+
+  connection.on("piece", function(piece) {
+    console.log("%s: piece %d (%d @ %d)", connection.getRemotePeerId(), piece.index, piece.piece.length, piece.offset);
+  });
+
+  this.emit("connection", connection);
+};
+
+TorrentSession.prototype.connectTo = function connectTo(options, cb) {
+  var _cb = cb;
+
+  var called = false;
+  cb = function cb() {
+    if (called) { return; } else { called = true; }
+    return _cb.apply(null, arguments);
   };
 
   var self = this;
 
   var connection = new BitTorrent.Protocol.TCP.Connection({
     infoHash: this.infoHash || null,
+    peerId: this.peerId || null,
   });
 
   var socket = net.connect(51413, "127.0.0.1");
 
-  socket.on("error", done).pipe(connection).on("error", done).pipe(socket);
+  socket.on("error", cb).pipe(connection).on("error", cb).pipe(socket);
 
   connection.handshake();
 
   connection.on("infoHash", function(infoHash) {
-    console.log("infoHash", infoHash);
+    if (infoHash.toString("hex") !== self.infoHash.toString("hex")) {
+      connection.end();
+
+      return cb(Error("infoHash from other client didn't match"));
+    }
   });
 
   connection.on("peerId", function(peerId) {
-    console.log("peerId", peerId);
-  });
-
-  connection.on("bitfield", function(bitfield) {
-    console.log("bitfield", bitfield);
-
-    return done(null, connection);
-
-    connection.bitfield(self.bitfield.toBuffer()).interested();
-  });
-
-  connection.on("choked", function() {
-    console.log("choked");
-  });
-
-  connection.on("unchoked", function() {
-    console.log("unchoked");
-  });
-
-  connection.on("interested", function() {
-    console.log("interested");
-  });
-
-  connection.on("notInterested", function() {
-    console.log("notInterested");
-  });
-
-  connection.on("piece", function(piece) {
-    console.log(piece);
+    return self.addConnection(connection, cb);
   });
 };
 
-var session = new TorrentSession();
+var session = new TorrentSession({
+  peerId: "BT.JS-" + crypto.randomBytes(7).toString("hex"),
+});
 
-session.on("torrent", function(torrent) {
+session.on("metadata", function(torrent) {
   var storage = new BitTorrent.Storage.File({
     filename: "./something",
     length: session.length,
@@ -155,6 +188,20 @@ session.on("torrent", function(torrent) {
   });
 });
 
+session.on("storage", function() {
+  console.log("session for torrent %s ready", session.infoHash.toString("hex"));
+
+  session.connectTo({host: "127.0.0.1", port: 51413}, function(err, connection) {
+    if (err) {
+      return console.warn(err);
+    }
+  });
+});
+
+session.on("connection", function(connection) {
+  console.log("%s: negotiated connection", connection.getRemotePeerId());
+});
+
 var decoder = new bencode.Decoder(),
     accumulator = new bencode.Accumulator(),
     objectifier = new bencode.Objectifier();
@@ -164,17 +211,5 @@ fs.createReadStream("./random.torrent").pipe(decoder).pipe(accumulator).pipe(obj
     if (err) {
       return console.warn(err);
     }
-
-    /*
-    session.connectTo({host: "127.0.0.1", port: 51413}, function(err, connection) {
-      if (err) {
-        return console.warn(err);
-      }
-
-      console.log("connected");
-    });
-    */
-
-    console.log(session);
   });
 });

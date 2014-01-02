@@ -1,3 +1,4 @@
+[![build status](https://secure.travis-ci.org/deoxxa/bittorrent.js.png)](http://travis-ci.org/deoxxa/bittorrent.js)
 bittorrent.js
 =============
 

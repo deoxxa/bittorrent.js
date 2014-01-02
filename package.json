@@ -10,9 +10,8 @@
     "url": "git://github.com/deoxxa/bittorrent.js.git"
   },
   "dependencies": {
-    "binary": "~0.3.0"
-  },
-  "devDependencies": {
-    "vows": "~0.6.3"
+    "concentrate": "~0.2.2",
+    "dissolve": "~0.3.2",
+    "bencode-stream": "0.0.9"
   }
 }

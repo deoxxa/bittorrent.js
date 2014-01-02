@@ -68,6 +68,7 @@ TorrentSession.prototype.setInfoHash = function setInfoHash(infoHash) {
 
 TorrentSession.prototype.setStorage = function setStorage(storage) {
   this.storage = storage;
+  this.bitfield = storage.getBitfield();
 };
 
 TorrentSession.prototype.connectTo = function connectTo(options, done) {
@@ -83,7 +84,6 @@ TorrentSession.prototype.connectTo = function connectTo(options, done) {
 
   var connection = new BitTorrent.Protocol.TCP.Connection({
     infoHash: this.infoHash || null,
-    bitfield: this.bitfield ? new Bitfield(this.bitfield.toBuffer()) : null,
   });
 
   var socket = net.connect(51413, "127.0.0.1");
@@ -105,7 +105,7 @@ TorrentSession.prototype.connectTo = function connectTo(options, done) {
 
     return done(null, connection);
 
-    connection.bitfield().interested();
+    connection.bitfield(self.bitfield.toBuffer()).interested();
   });
 
   connection.on("choked", function() {
